@@ -2,6 +2,7 @@
 Entry point for all the repo-related commands.
 """
 
+import os
 import typer
 from rich import print as fprint
 from helpers.files import get_abs_path, is_directory
@@ -19,7 +20,25 @@ def analyze(path: str):
         fprint(f"[bold red]{full_path} is not a valid folder path[/bold red]")
         raise typer.Exit()
 
-    fprint(f"Analyzing repos in folder: [blue]{full_path}[/blue]")
+    fprint(f"Analyzing repos in folder: [blue]{full_path}[/blue]\n")
+    fprint("[bold]Files:[/bold]")
+    for folder in os.listdir(full_path):
+        sub_folder_path = os.path.join(full_path, folder)
+
+        if not is_directory(sub_folder_path):
+            icon = "•"
+            descriptor = "([bold red]is not a folder[/bold red])"
+        else:
+            icon = "▸"
+            sub_folders = os.listdir(sub_folder_path)
+            is_repo_msg = "([bold green]is a repo[/bold green])"
+            not_is_repo_msg = "([bold red]is not a repo[/bold red])"
+
+            descriptor = is_repo_msg if ".git" in sub_folders else not_is_repo_msg
+
+        fprint(f"[bold yellow]{icon}[/bold yellow] {folder} {descriptor}")
+
+    print()
 
 
 @app.command()
