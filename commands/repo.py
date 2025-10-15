@@ -6,6 +6,7 @@ import os
 import typer
 from rich import print as fprint
 from helpers.files import get_abs_path, is_directory
+from helpers.git import is_repo, check_default_branch, pull_changes
 
 app = typer.Typer()
 
@@ -18,27 +19,21 @@ def analyze(path: str):
 
     if not is_directory(full_path):
         fprint(f"[bold red]{full_path} is not a valid folder path[/bold red]")
+
         raise typer.Exit()
 
-    fprint(f"Analyzing repos in folder: [blue]{full_path}[/blue]\n")
-    fprint("[bold]Files:[/bold]")
+    fprint(f"Analyzing content within the folder: [blue]{full_path}[/blue]\n")
+    fprint("[bold]Dir Content:[/bold]")
+
     for folder in os.listdir(full_path):
         sub_folder_path = os.path.join(full_path, folder)
 
         if not is_directory(sub_folder_path):
-            icon = "•"
-            descriptor = "([bold red]is not a folder[/bold red])"
+            descriptor = "(file)"
         else:
-            icon = "▸"
-            sub_folders = os.listdir(sub_folder_path)
-            is_repo_msg = "([bold green]is a repo[/bold green])"
-            not_is_repo_msg = "([bold red]is not a repo[/bold red])"
+            descriptor = "(repo)" if is_repo(sub_folder_path) else "(folder)"
 
-            descriptor = is_repo_msg if ".git" in sub_folders else not_is_repo_msg
-
-        fprint(f"[bold yellow]{icon}[/bold yellow] {folder} {descriptor}")
-
-    print()
+        print(f"● {folder} {descriptor}")
 
 
 @app.command()
@@ -48,4 +43,19 @@ def update(path: str):
     """
     full_path = get_abs_path(path)
 
-    fprint(f"Updating all repos in [blue]{full_path}[/blue]")
+    fprint(f"Updating all the repos within the folder: [blue]{full_path}[/blue]\n")
+    fprint("[bold]Repos:[/bold]")
+
+    for folder in os.listdir(full_path):
+        sub_folder_path = os.path.join(full_path, folder)
+
+        if is_directory(sub_folder_path) and is_repo(sub_folder_path):
+            branch_error, branch = check_default_branch(sub_folder_path)
+
+            if branch_error:
+                fprint(f"● {folder}\n[red]{branch_error}[/red]")
+            else:
+                pull_error, output = pull_changes(sub_folder_path, str(branch))
+                context = f"[red]{pull_error}[/red]" if pull_error else f"[green]{output}[/green]"
+
+                fprint(f"● {folder}\n{context}")
